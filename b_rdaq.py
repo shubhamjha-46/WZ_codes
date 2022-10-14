@@ -12,7 +12,7 @@ np.random.seed(10)
 d=512
 n=10
 I=10
-B = 3 #boosting parameter
+B = 1 #boosting parameter
 print('Clients: {}, dimension: {}, Iteration: {}'.format(n,d, I))
 e=0
 M=[0]*4  ## 4 is enough to cover unity norms
@@ -23,26 +23,26 @@ M=[0.0]+M
 print('Communication per dim: B-RDAQ =',int(4*np.log2(B+1))+2)  # as per the paper; 2 counts for log(len(M))
 
 
-def B_RDAQ(flat_grad, side_inf, diagonal):
+def B_RDAQ(flat_grad, side_inf, diagonal, Bnd):
     #Random Rotation    
     flat_grad=np.multiply(diagonal, flat_grad)        
     #print(flat_grad)
     rotated_flat_grad=sp.fwht(flat_grad)
     rotated_flat_grad = np.array(rotated_flat_grad, dtype=np.float64)
     rotated_norm_grad=rotated_flat_grad/d**0.5
-    grad_norm=LA.norm(rotated_norm_grad)
+    #grad_norm=LA.norm(rotated_norm_grad)
     
     
     #Normalizingthegradient
-    rotated_norm_grad=rotated_norm_grad/grad_norm
+    rotated_norm_grad=rotated_norm_grad/Bnd
     
     # Rotate and normalize the side-information
     side_inf=np.multiply(diagonal, side_inf)
     rotated_side_inf=sp.fwht(side_inf)
     rotated_side_inf=np.array(rotated_side_inf, dtype=np.float64)
     rotated_norm_side=rotated_side_inf/d**0.5
-    grad_norm_side = LA.norm(rotated_norm_side)
-    rotated_norm_side /=grad_norm_side 
+    #grad_norm_side = LA.norm(rotated_norm_side)
+    rotated_norm_side /=Bnd 
   
 	
     #Nonuniform_Level
@@ -72,7 +72,7 @@ def B_RDAQ(flat_grad, side_inf, diagonal):
             otp[i]+=rotated_norm_side[i]
         output+=np.array(otp)    
     
-    output = output*grad_norm/B # Averaging out the boosting effect
+    output = output*Bnd/B # Averaging out the boosting effect
     
     #Inverse rotation
     output = output*(d**0.5)
@@ -94,12 +94,13 @@ def UnifQ(input_v, U_r, tmp):
 
 ''' Note: In the following, we take sigma_md as our tuning parameter. Its is realted as delta_prime/8 to our paper description. '''
 
-#sigma_range=[0.000078125*(2**i) for i in range(8)]  ### Uncomment it for 6 and 8  bit comparisons
-sigma_range=[0.000078125*(2**(i-2)) for i in range(8)]  ## uncomment it only for 10 bit comparisons
+sigma_range=[0.000078125*(2**i) for i in range(8)]  ### Uncomment it for 6 and 8  bit comparisons
+#sigma_range=[0.000078125*(2**(i-2)) for i in range(8)]  ## uncomment it only for 10 bit comparisons
 
 MSE_B_RDAQ=[]
 for sig in sigma_range:
     sigma_md= sig
+    Bnd = (1+4*sig)*np.sqrt(d)
     MSE_B_RDAQ_I=[0.0]*I
     for j in range(I):
         frac=int(d**((j-1)/10.0))
@@ -119,7 +120,7 @@ for sig in sigma_range:
              res = max(abs(y-x))
             
              
-             Output_V=B_RDAQ(x, y, diagonal)           
+             Output_V=B_RDAQ(x, y, diagonal, Bnd)           
              input_avg=np.add(x, input_avg)
              
              output_avg=np.add(Output_V, output_avg)

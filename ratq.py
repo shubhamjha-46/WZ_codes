@@ -19,13 +19,13 @@ for i in range(4):
     e=np.exp(e)
 
 M=[0.0]+M    
-K=8            #No. of bits used after finding the smallest tetra iterated interval
+K=4            #No. of bits used after finding the smallest tetra iterated interval
 
 print('Communication per dim: RATQ=', K+2 )  # 2-bits are for log(len(M))
 
 
 
-def RATQ(flat_grad, diagonal, U_random):
+def RATQ(flat_grad, diagonal, U_random, Bnd):
     #Random Rotation    
     flat_grad=np.multiply(diagonal, flat_grad)        
     rotated_flat_grad=sp.fwht(flat_grad)  
@@ -33,9 +33,9 @@ def RATQ(flat_grad, diagonal, U_random):
     rotated_norm_grad=rotated_flat_grad/d**0.5
     
     #Normalizingthegradient
-    grad_norm=LA.norm(rotated_norm_grad)
-    rotated_norm_grad=rotated_norm_grad/grad_norm
-	
+    #grad_norm=LA.norm(rotated_norm_grad)
+    rotated_norm_grad=rotated_norm_grad/Bnd
+    #print(grad_norm)
     #Finding the smallest level in vector M
     temp_M=np.digitize( np.absolute(rotated_norm_grad), M)
     temp_2=[0.0]*d
@@ -44,7 +44,7 @@ def RATQ(flat_grad, diagonal, U_random):
     
     #Uniform quantization in smallest level found just above
     output=UnifQ_R(temp_2, U_random, temp_M)    
-    output = grad_norm*output*(d**0.5)
+    output = Bnd*output*(d**0.5)
     output = list(output)
     output_v=np.array(sp.ifwht(output), dtype=np.float64)
     output_v=np.multiply(output_v, diagonal)
@@ -67,12 +67,14 @@ def M_unif(l, inp):
 
 ''' Note: In the following, we take sigma_md as our tuning parameter. Its is realted as delta_prime/8 to our paper description. '''
 
-#sigma_range=[0.000078125*(2**i) for i in range(8)]  ### Uncomment it for 6 and 8  bit comparisons
-sigma_range=[0.000078125*(2**(i-2)) for i in range(8)]  ## uncomment it only for 10 bit comparisons
+sigma_range=[0.000078125*(2**i) for i in range(8)]  ### Uncomment it for 6 and 8  bit comparisons
+#sigma_range=[0.000078125*(2**(i-2)) for i in range(8)]  ## uncomment it only for 10 bit comparisons
 MSE_RATQ=[]
 
 for sig in sigma_range:
     sigma_md= sig
+    #print('Bound', (1+4*sig)*np.sqrt(d))
+    Bnd = (1+4*sig)*np.sqrt(d)
     MSE_RATQ_I=[0.0]*I
     for j in range(I):
         frac=int(d**((j-1)/10.0))
@@ -89,7 +91,7 @@ for sig in sigma_range:
              x= mean+t
        
              U_random = np.random.rand(d)           
-             Output_V_Ratq=RATQ(x,  diagonal, U_random)
+             Output_V_Ratq=RATQ(x,  diagonal, U_random, Bnd)
      
              input_avg=np.add(x, input_avg)
              output_avg_ratq=np.add(Output_V_Ratq, output_avg_ratq)

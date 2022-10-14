@@ -54,13 +54,14 @@ def RMQ(x,y, diagonal, U_rand, res):
 		dist1=1
 		dist2=0
 		
-		w=4000  ### 4000 works for 10-bit(very smaller sigma regimes) ; 1000 is enough for 6, 8-bits
+		w=4500  ### Set 1500 for 6 bits; 4500 for 10 bits. Though, can be optimized.
 		'''For smaller delta, search space needs to be large to find argmin in RMQ decoder. 
 	    One way to see- smaller delta->small epsilon->more number of K-size windows. 
 		Search space should be proportional to multiplicative increment in delta.'''
 		while dist1>=dist2:
 			w-=1
-			#print((rotated_norm_y[i]+2**(K+2)*eps))
+			#print(eps)
+			#print((rotated_norm_y[i]-2**(K)*eps), (rotated_norm_y[i]+2**(K)*eps))
 			dist1 = np.abs((bt_encoded[i]+w*2**(K))*eps-rotated_norm_y[i])
 			dist2 = np.abs((bt_encoded[i]+(w-1)*2**(K))*eps-rotated_norm_y[i])
 		W.append(w)
@@ -78,12 +79,13 @@ def RMQ(x,y, diagonal, U_rand, res):
 
 ''' Note: In the following, we take sigma_md as our tuning parameter. Its is realted as delta_prime/8 to our paper description. '''
 
-#sigma_range=[0.000078125*(2**i) for i in range(8)]  ### Uncomment it for 6 and 8  bit comparisons
-sigma_range=[0.000078125*(2**(i-2)) for i in range(8)]  ## uncomment it only for 10 bit comparisons
+#sigma_range=[0.000078125*(2**i) for i in range(1)]  ### Uncomment it for 6 and 8  bit comparisons
+sigma_range=[0.000078125*(2**(i-2)) for i in range(1)]  ## uncomment it only for 10 bit comparisons
 
 MSE_RMQ=[]
 for sig in sigma_range:
     sigma_md= sig
+    res = 8*sig
     MSE_RMQ_I=[0.0]*I
     for j in range(I):
         frac=int(d**((j-1)/10.0))
@@ -98,7 +100,7 @@ for sig in sigma_range:
              x= mean+t  # sampling the input
              y = mean+8*sigma_md*(np.random.rand(d)-0.5) # side-information
              
-             res = max(abs(y-x))   # required for choosing parameter epsilon in RMQ
+             #res = max(abs(y-x))   # required for choosing parameter epsilon in RMQ
              
              U_random = np.random.rand(d)
             
@@ -120,7 +122,7 @@ for sig in sigma_range:
 font = {'family': 'normal', 'weight': 'normal', 'size': 14}
 matplotlib.rc('font', **font)
 
-np.savetxt("RMSE_RMQ_"+str(K)+"_"+str(d)+".dat", MSE_RMQ, delimiter =", ", fmt ='% s')
+#np.savetxt("RMSE_RMQ_"+str(K)+"_"+str(d)+".dat", MSE_RMQ, delimiter =", ", fmt ='% s')
 plt.plot(sigma_range, MSE_RMQ, label='RMQ '+str(K)+'-bits')
 
 plt.legend()
